@@ -1,0 +1,18 @@
+# GmapsEx — example input file
+#
+# One query per line. Blank lines and lines starting with `#` are ignored.
+# Optional custom ID after a `#!#` separator (e.g. for downstream tagging):
+#
+#   coffee shops near me #!#sf-coffee-batch1
+#
+# Run with:
+#   mix gmaps.scrape --input example-queries.txt --geo "30.7834,30.9983" --gl eg --lang ar --csv out.csv
+
+مقاهي
+كافيهات
+قهاوي
+مطاعم
+كشري
+شاورما
+coffee shops
+restaurants

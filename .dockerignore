@@ -1,0 +1,14 @@
+_build
+deps
+.git
+.gitignore
+test
+tmp
+*.csv
+*.jsonl
+.formatter.exs
+COMPARISON.md
+EMBEDDING.md
+GAPS.md
+PRODUCTION.md
+USAGE.md
