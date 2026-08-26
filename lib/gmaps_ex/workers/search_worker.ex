@@ -54,7 +54,12 @@ defmodule GmapsEx.Workers.SearchWorker do
 
         enrich_jobs =
           if enrich? do
-            Enum.flat_map(new_places, fn p ->
+            # uniq_by/2 is load-bearing: Oban's `unique:` compiles to ON CONFLICT,
+            # and two identical args inside ONE insert_all raise
+            # cardinality_violation, discarding the whole search job.
+            new_places
+            |> Enum.uniq_by(& &1.data_id)
+            |> Enum.flat_map(fn p ->
               case p.data_id do
                 id when is_binary(id) and id != "" ->
                   [

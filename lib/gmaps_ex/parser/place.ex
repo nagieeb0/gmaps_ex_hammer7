@@ -73,14 +73,27 @@ defmodule GmapsEx.Parser.Place do
     end
   end
 
-  # Google has moved review_count between responses. Try the new location first
-  # (`darray[37, 1]` as of mid-2026), then fall back to the older `darray[4, 8]`.
+  # The rating histogram is the authoritative total: summed, it matches what
+  # Maps prints and what the browser-based scrapers report. `darray[37, 1]`
+  # counts something else — measured against 130 places scraped both ways, it
+  # came in at a median 0.45x the real figure, and read 1 for a place with 33
+  # ratings. Use it only when the histogram is absent.
   defp review_count(darray) do
-    case Path.get(darray, [37, 1]) do
-      n when is_integer(n) and n > 0 -> n
-      n when is_float(n) and n > 0 -> trunc(n)
-      _ -> Path.get(darray, [4, 8], :int, 0)
+    case histogram_total(darray) do
+      n when n > 0 ->
+        n
+
+      _ ->
+        case Path.get(darray, [37, 1]) do
+          n when is_integer(n) and n > 0 -> n
+          n when is_float(n) and n > 0 -> trunc(n)
+          _ -> Path.get(darray, [4, 8], :int, 0)
+        end
     end
+  end
+
+  defp histogram_total(darray) do
+    Enum.reduce(0..4, 0, fn i, acc -> acc + Path.get(darray, [175, 3, i], :int, 0) end)
   end
 
   defp categories(darray) do

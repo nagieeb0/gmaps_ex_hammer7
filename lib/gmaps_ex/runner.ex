@@ -45,7 +45,14 @@ defmodule GmapsEx.Runner do
         })
       end)
 
-    inserted = Oban.insert_all(jobs)
+    # Postgres caps a statement at 65,535 bind parameters and each job binds 9,
+    # so one insert_all dies above ~7,200 seeds. A country-wide grid is well
+    # past that. Chunk it.
+    inserted =
+      jobs
+      |> Enum.chunk_every(2_000)
+      |> Enum.flat_map(&Oban.insert_all/1)
+
     {:ok, length(inserted)}
   end
 
