@@ -139,7 +139,16 @@ defmodule GmapsEx.Parser.Place do
     end
   end
 
+  # Categorised gallery (`[171, 0]`) when Google ships it; otherwise the place-photo
+  # strip at `[51, 0]` (each entry: image url at `[6, 0]`), which carries no category.
   defp images(darray) do
+    case categorised_images(darray) do
+      [] -> strip_images(darray)
+      imgs -> imgs
+    end
+  end
+
+  defp categorised_images(darray) do
     darray
     |> Path.get([171, 0], :list, [])
     |> Enum.flat_map(fn item ->
@@ -152,6 +161,18 @@ defmodule GmapsEx.Parser.Place do
         []
       end
     end)
+  end
+
+  defp strip_images(darray) do
+    darray
+    |> Path.get([51, 0], :list, [])
+    |> Enum.flat_map(fn item ->
+      case Path.get(item, [6, 0], :string) do
+        "http" <> _ = link -> [%{title: "photo", image: link}]
+        _ -> []
+      end
+    end)
+    |> Enum.uniq_by(& &1.image)
   end
 
   defp reservations(darray) do

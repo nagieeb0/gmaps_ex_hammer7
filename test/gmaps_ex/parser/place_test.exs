@@ -84,6 +84,24 @@ defmodule GmapsEx.Parser.PlaceTest do
       assert {:error, :invalid_json} = Place.parse(Jason.encode!([nil, nil]))
     end
 
+    test "falls back to the place-photo strip at [51, 0] when [171, 0] is absent" do
+      strip = [
+        [nil, nil, nil, nil, nil, nil, ["https://lh3.googleusercontent.com/a=w114"]],
+        [nil, nil, nil, nil, nil, nil, ["https://lh3.googleusercontent.com/b=w360"]],
+        [nil, nil, nil, nil, nil, nil, ["https://lh3.googleusercontent.com/a=w114"]],
+        [nil, nil, nil, nil, nil, nil, [nil]]
+      ]
+
+      darray = build_darray(%{11 => "Photo Place", 51 => [strip]})
+      jd = List.duplicate(nil, 30) |> List.replace_at(6, darray)
+      assert {:ok, place} = Place.parse(Jason.encode!(jd))
+
+      assert Enum.map(place.images, & &1.image) == [
+               "https://lh3.googleusercontent.com/a=w114",
+               "https://lh3.googleusercontent.com/b=w360"
+             ]
+    end
+
     test "handles missing optional fields without crashing" do
       darray = build_darray(%{11 => "Minimal Place"})
       jd = List.duplicate(nil, 30) |> List.replace_at(6, darray)
