@@ -26,3 +26,18 @@ gmaps_ex-*.tar
 # Scraped datasets — local only, not part of the library
 /egypt-dentists*
 /tanta*
+.gstack/
+/malqa/
+/leads_pages/
+/jobs/
+/healthcare/
+/filtered_leads/
+/leads*
+/riyadh-*
+/sig-*.zip
+/scrape_raw_results.*
+/job_search_report.md
+*.log
+*.csv
+*.xlsx
+.~lock.*

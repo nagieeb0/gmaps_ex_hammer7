@@ -31,6 +31,11 @@ defmodule GmapsEx.Workers.EmailWorker do
 
   @subpaths ~w[/ /contact /contact-us /about /about-us]
 
+  # Ceiling on one subpath fetch. Above Client's own 30s request timeout so a
+  # single slow-but-alive host still completes, below its 3-retry worst case so
+  # a dead host cannot hold a queue slot for minutes.
+  @fetch_timeout_ms 40_000
+
   @social_blocklist ~w[facebook.com instagram.com twitter.com x.com linkedin.com]
 
   @impl Oban.Worker
@@ -79,7 +84,19 @@ defmodule GmapsEx.Workers.EmailWorker do
       %URI{base | path: path, query: nil, fragment: nil} |> URI.to_string()
     end)
     |> Enum.uniq()
-    |> Enum.flat_map(&fetch_emails/1)
+    # Fetched concurrently: sequentially, a job costs the SUM of five fetches,
+    # and against dead or slow hosts (Client retries 3× on a 30s timeout) that
+    # ran to minutes each and starved the queue. Now a job costs the slowest
+    # single fetch, hard-capped by @fetch_timeout_ms.
+    |> Task.async_stream(&fetch_emails/1,
+      max_concurrency: length(@subpaths),
+      timeout: @fetch_timeout_ms,
+      on_timeout: :kill_task
+    )
+    |> Enum.flat_map(fn
+      {:ok, emails} -> emails
+      {:exit, _reason} -> []
+    end)
     |> Enum.uniq()
     |> Enum.reject(&junk?/1)
     |> Enum.take(10)
@@ -131,7 +148,11 @@ defmodule GmapsEx.Workers.EmailWorker do
     |> select([p], p.id)
     |> Repo.all()
     |> Enum.map(fn id -> new(%{"place_id" => id}) end)
-    |> Oban.insert_all()
+    # Chunk to stay under PostgreSQL's 65,535-parameter cap — a single
+    # insert_all of tens of thousands of jobs blows the protocol limit
+    # (same guard as GmapsEx.Runner.start/1).
+    |> Enum.chunk_every(1_000)
+    |> Enum.flat_map(&Oban.insert_all/1)
     |> length()
   end
 end

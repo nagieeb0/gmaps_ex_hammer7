@@ -21,6 +21,7 @@ defmodule GmapsEx.Workers.SearchWorker do
     gl = args["gl"] || "us"
     tenant_id = args["tenant_id"]
     input_id = args["input_id"]
+    extract_emails = Map.get(args, "extract_emails", false)
 
     opts = [
       lat: args["lat"],
@@ -63,7 +64,11 @@ defmodule GmapsEx.Workers.SearchWorker do
                       "lang" => lang,
                       "gl" => gl,
                       "tenant_id" => tenant_id,
-                      "input_id" => input_id
+                      "input_id" => input_id,
+                      # PlaceWorker is what actually queues EmailWorker, so the
+                      # seed's opt-in has to ride along here — otherwise
+                      # `extract_emails: true` on a run is silently a no-op.
+                      "extract_emails" => extract_emails
                     })
                   ]
 

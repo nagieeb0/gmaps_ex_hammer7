@@ -17,7 +17,10 @@ defmodule GmapsEx.Runner do
           required(:zoom) => integer() | float(),
           optional(:lang) => String.t(),
           optional(:gl) => String.t(),
-          optional(:tenant_id) => String.t()
+          optional(:tenant_id) => String.t(),
+          optional(:input_id) => String.t(),
+          optional(:extract_emails) => boolean(),
+          optional(:enrich) => boolean()
         }
 
   @doc """
@@ -41,11 +44,19 @@ defmodule GmapsEx.Runner do
           "lang" => Map.get(seed, :lang, "en"),
           "gl" => Map.get(seed, :gl, "us"),
           "tenant_id" => Map.get(seed, :tenant_id),
-          "extract_emails" => Map.get(seed, :extract_emails, false)
+          "extract_emails" => Map.get(seed, :extract_emails, false),
+          "enrich" => Map.get(seed, :enrich, true)
         })
       end)
 
-    inserted = Oban.insert_all(jobs)
+    # PostgreSQL protocol limit: max 65,535 parameters per query.
+    # Each Oban job has ~9 params, so cap at 1,000 jobs per batch
+    # to stay safely under the limit (~9,000 params per batch).
+    inserted =
+      jobs
+      |> Enum.chunk_every(1_000)
+      |> Enum.flat_map(&Oban.insert_all/1)
+
     {:ok, length(inserted)}
   end
 
