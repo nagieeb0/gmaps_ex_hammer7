@@ -49,12 +49,12 @@ defmodule GmapsEx.Runner do
         })
       end)
 
-    # PostgreSQL protocol limit: max 65,535 parameters per query.
-    # Each Oban job has ~9 params, so cap at 1,000 jobs per batch
-    # to stay safely under the limit (~9,000 params per batch).
+    # Postgres caps a statement at 65,535 bind parameters and each job binds 9,
+    # so one insert_all dies above ~7,200 seeds. A country-wide grid is well
+    # past that. Chunk it.
     inserted =
       jobs
-      |> Enum.chunk_every(1_000)
+      |> Enum.chunk_every(2_000)
       |> Enum.flat_map(&Oban.insert_all/1)
 
     {:ok, length(inserted)}

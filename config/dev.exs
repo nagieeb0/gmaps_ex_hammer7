@@ -4,7 +4,8 @@ config :gmaps_ex, GmapsEx.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  database: "gmaps_ex_dev",
+  port: 55432,
+  database: System.get_env("GMAPS_DB") || "gmaps_ex_dev",
   show_sensitive_data_on_connection_error: true,
   # Sized for the scraper's Oban worker concurrency (search + place workers each
   # hit the DB). Keep this ≥ search_concurrency + place_concurrency + headroom.
